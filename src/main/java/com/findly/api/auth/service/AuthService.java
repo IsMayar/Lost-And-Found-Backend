@@ -9,9 +9,11 @@ import com.findly.api.common.enums.UserStatus;
 import com.findly.api.common.exception.ApiException;
 import com.findly.api.common.exception.ErrorCode;
 import com.findly.api.security.jwt.JwtService;
+import com.findly.api.security.user.UserPrincipal;
 import com.findly.api.users.entity.User;
 import com.findly.api.users.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -69,5 +71,18 @@ public class AuthService {
                 "Bearer",
                 AuthUserResponse.fromUser(user)
         );
+    }
+
+    @Transactional(readOnly = true)
+    public AuthUserResponse me(Authentication authentication) {
+        if (authentication == null || !(authentication.getPrincipal() instanceof UserPrincipal principal)) {
+            throw new ApiException(ErrorCode.UNAUTHORIZED);
+        }
+
+        User user = userRepository.findById(principal.getId())
+                .filter(foundUser -> !foundUser.isDeleted())
+                .orElseThrow(() -> new ApiException(ErrorCode.UNAUTHORIZED));
+
+        return AuthUserResponse.fromUser(user);
     }
 }

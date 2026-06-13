@@ -10,6 +10,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -44,6 +45,20 @@ public class AuthController {
 
         return ApiResponse.success(
                 "User logged in successfully",
+                response,
+                servletRequest.getRequestURI()
+        );
+    }
+
+    @GetMapping("/me")
+    public ApiResponse<AuthUserResponse> me(
+            Authentication authentication,
+            HttpServletRequest servletRequest
+    ) {
+        AuthUserResponse response = authService.me(authentication);
+
+        return ApiResponse.success(
+                "Current user returned successfully",
                 response,
                 servletRequest.getRequestURI()
         );
