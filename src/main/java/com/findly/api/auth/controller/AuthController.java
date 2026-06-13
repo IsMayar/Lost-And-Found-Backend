@@ -3,6 +3,7 @@ package com.findly.api.auth.controller;
 import com.findly.api.auth.dto.AuthResponse;
 import com.findly.api.auth.dto.AuthUserResponse;
 import com.findly.api.auth.dto.LoginRequest;
+import com.findly.api.auth.dto.RefreshTokenRequest;
 import com.findly.api.auth.dto.RegisterRequest;
 import com.findly.api.auth.service.AuthService;
 import com.findly.api.common.response.ApiResponse;
@@ -45,6 +46,20 @@ public class AuthController {
 
         return ApiResponse.success(
                 "User logged in successfully",
+                response,
+                servletRequest.getRequestURI()
+        );
+    }
+
+    @PostMapping("/refresh")
+    public ApiResponse<AuthResponse> refresh(
+            @Valid @RequestBody RefreshTokenRequest request,
+            HttpServletRequest servletRequest
+    ) {
+        AuthResponse response = authService.refresh(request);
+
+        return ApiResponse.success(
+                "Token refreshed successfully",
                 response,
                 servletRequest.getRequestURI()
         );

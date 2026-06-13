@@ -3,6 +3,7 @@ package com.findly.api.auth.service;
 import com.findly.api.auth.dto.AuthResponse;
 import com.findly.api.auth.dto.AuthUserResponse;
 import com.findly.api.auth.dto.LoginRequest;
+import com.findly.api.auth.dto.RefreshTokenRequest;
 import com.findly.api.auth.dto.RegisterRequest;
 import com.findly.api.common.enums.UserRole;
 import com.findly.api.common.enums.UserStatus;
@@ -17,6 +18,8 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -65,12 +68,34 @@ public class AuthService {
             throw new ApiException(ErrorCode.UNAUTHORIZED, "Invalid email or password");
         }
 
-        return new AuthResponse(
-                jwtService.generateAccessToken(user),
-                jwtService.generateRefreshToken(user),
-                "Bearer",
-                AuthUserResponse.fromUser(user)
-        );
+        return buildAuthResponse(user);
+    }
+
+    @Transactional(readOnly = true)
+    public AuthResponse refresh(RefreshTokenRequest request) {
+        String refreshToken = request.refreshToken().trim();
+
+        try {
+            if (!jwtService.isRefreshToken(refreshToken)) {
+                throw new ApiException(ErrorCode.UNAUTHORIZED, "Invalid refresh token");
+            }
+
+            UUID userId = jwtService.extractUserId(refreshToken);
+
+            User user = userRepository.findById(userId)
+                    .filter(foundUser -> !foundUser.isDeleted())
+                    .orElseThrow(() -> new ApiException(ErrorCode.UNAUTHORIZED, "Invalid refresh token"));
+
+            if (user.getStatus() != UserStatus.ACTIVE) {
+                throw new ApiException(ErrorCode.FORBIDDEN, "User account is not active");
+            }
+
+            return buildAuthResponse(user);
+        } catch (ApiException exception) {
+            throw exception;
+        } catch (Exception exception) {
+            throw new ApiException(ErrorCode.UNAUTHORIZED, "Invalid refresh token");
+        }
     }
 
     @Transactional(readOnly = true)
@@ -84,5 +109,14 @@ public class AuthService {
                 .orElseThrow(() -> new ApiException(ErrorCode.UNAUTHORIZED));
 
         return AuthUserResponse.fromUser(user);
+    }
+
+    private AuthResponse buildAuthResponse(User user) {
+        return new AuthResponse(
+                jwtService.generateAccessToken(user),
+                jwtService.generateRefreshToken(user),
+                "Bearer",
+                AuthUserResponse.fromUser(user)
+        );
     }
 }
