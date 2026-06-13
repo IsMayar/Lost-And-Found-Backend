@@ -7,6 +7,8 @@ import com.findly.api.common.pagination.PageResponse;
 import com.findly.api.reports.dto.CreateReportRequest;
 import com.findly.api.reports.dto.ReportResponse;
 import com.findly.api.reports.dto.ReportSearchRequest;
+import com.findly.api.reports.dto.UpdateReportRequest;
+import com.findly.api.reports.dto.UpdateReportStatusRequest;
 import com.findly.api.reports.entity.Report;
 import com.findly.api.reports.repository.ReportRepository;
 import com.findly.api.security.user.UserPrincipal;
@@ -95,6 +97,105 @@ public class ReportService {
                 .stream()
                 .map(ReportResponse::fromReport)
                 .toList();
+    }
+
+    @Transactional
+    public ReportResponse updateReport(UUID reportId, Authentication authentication, UpdateReportRequest request) {
+        User currentUser = getCurrentUser(authentication);
+        Report report = getOwnedReport(reportId, currentUser);
+
+        if (request.category() != null) {
+            report.setCategory(request.category());
+        }
+
+        if (request.title() != null && !request.title().isBlank()) {
+            report.setTitle(request.title().trim());
+        }
+
+        if (request.description() != null && !request.description().isBlank()) {
+            report.setDescription(request.description().trim());
+        }
+
+        if (request.locationText() != null) {
+            report.setLocationText(cleanNullable(request.locationText()));
+        }
+
+        if (request.city() != null) {
+            report.setCity(cleanNullable(request.city()));
+        }
+
+        if (request.country() != null) {
+            report.setCountry(cleanNullable(request.country()));
+        }
+
+        if (request.eventDate() != null) {
+            report.setEventDate(request.eventDate());
+        }
+
+        if (request.color() != null) {
+            report.setColor(cleanNullable(request.color()));
+        }
+
+        if (request.brand() != null) {
+            report.setBrand(cleanNullable(request.brand()));
+        }
+
+        if (request.privateHint() != null) {
+            report.setPrivateHint(cleanNullable(request.privateHint()));
+        }
+
+        if (request.contactName() != null) {
+            report.setContactName(cleanNullable(request.contactName()));
+        }
+
+        if (request.contactPhone() != null) {
+            report.setContactPhone(cleanNullable(request.contactPhone()));
+        }
+
+        if (request.contactEmail() != null) {
+            report.setContactEmail(cleanNullable(request.contactEmail()));
+        }
+
+        Report savedReport = reportRepository.save(report);
+
+        return ReportResponse.fromReport(savedReport);
+    }
+
+    @Transactional
+    public ReportResponse updateReportStatus(UUID reportId, Authentication authentication, UpdateReportStatusRequest request) {
+        User currentUser = getCurrentUser(authentication);
+        Report report = getOwnedReport(reportId, currentUser);
+
+        if (request.status() == ReportStatus.DRAFT || request.status() == ReportStatus.PENDING_REVIEW || request.status() == ReportStatus.REJECTED) {
+            throw new ApiException(ErrorCode.BAD_REQUEST, "This status cannot be set by user");
+        }
+
+        report.setStatus(request.status());
+
+        Report savedReport = reportRepository.save(report);
+
+        return ReportResponse.fromReport(savedReport);
+    }
+
+    @Transactional
+    public void deleteReport(UUID reportId, Authentication authentication) {
+        User currentUser = getCurrentUser(authentication);
+        Report report = getOwnedReport(reportId, currentUser);
+
+        report.markDeleted();
+        reportRepository.save(report);
+    }
+
+    private Report getOwnedReport(UUID reportId, User currentUser) {
+        Report report = reportRepository.findById(reportId)
+                .filter(foundReport -> !foundReport.isDeleted())
+                .orElseThrow(() -> new ApiException(ErrorCode.NOT_FOUND, "Report not found"));
+
+        if (!report.getOwner().getId().equals(currentUser.getId())) {
+            throw new ApiException(ErrorCode.FORBIDDEN, "You are not allowed to modify this report");
+        }
+
+        return report;
     }
 
     private Specification<Report> buildSearchSpecification(ReportSearchRequest request) {
