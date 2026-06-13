@@ -15,6 +15,9 @@ import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+import java.util.UUID;
+
 @Service
 @RequiredArgsConstructor
 public class ReportService {
@@ -48,6 +51,25 @@ public class ReportService {
         Report savedReport = reportRepository.save(report);
 
         return ReportResponse.fromReport(savedReport);
+    }
+
+    @Transactional(readOnly = true)
+    public ReportResponse getReportById(UUID reportId) {
+        Report report = reportRepository.findById(reportId)
+                .filter(foundReport -> !foundReport.isDeleted())
+                .orElseThrow(() -> new ApiException(ErrorCode.NOT_FOUND, "Report not found"));
+
+        return ReportResponse.fromReport(report);
+    }
+
+    @Transactional(readOnly = true)
+    public List<ReportResponse> getMyReports(Authentication authentication) {
+        User currentUser = getCurrentUser(authentication);
+
+        return reportRepository.findByOwnerIdAndDeletedFalseOrderByCreatedAtDesc(currentUser.getId())
+                .stream()
+                .map(ReportResponse::fromReport)
+                .toList();
     }
 
     private User getCurrentUser(Authentication authentication) {

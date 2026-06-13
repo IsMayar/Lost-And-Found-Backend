@@ -11,6 +11,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+import java.util.UUID;
+
 @RestController
 @RequestMapping("/api/v1/reports")
 @RequiredArgsConstructor
@@ -30,6 +33,34 @@ public class ReportController {
         return ApiResponse.success(
                 HttpStatus.CREATED.value(),
                 "Report created successfully",
+                response,
+                servletRequest.getRequestURI()
+        );
+    }
+
+    @GetMapping("/{id}")
+    public ApiResponse<ReportResponse> getReportById(
+            @PathVariable UUID id,
+            HttpServletRequest servletRequest
+    ) {
+        ReportResponse response = reportService.getReportById(id);
+
+        return ApiResponse.success(
+                "Report returned successfully",
+                response,
+                servletRequest.getRequestURI()
+        );
+    }
+
+    @GetMapping("/my")
+    public ApiResponse<List<ReportResponse>> getMyReports(
+            Authentication authentication,
+            HttpServletRequest servletRequest
+    ) {
+        List<ReportResponse> response = reportService.getMyReports(authentication);
+
+        return ApiResponse.success(
+                "My reports returned successfully",
                 response,
                 servletRequest.getRequestURI()
         );
