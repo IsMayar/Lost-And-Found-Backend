@@ -3,6 +3,7 @@ package com.findly.api.auth.service;
 import com.findly.api.auth.dto.AuthResponse;
 import com.findly.api.auth.dto.AuthUserResponse;
 import com.findly.api.auth.dto.LoginRequest;
+import com.findly.api.auth.dto.LogoutRequest;
 import com.findly.api.auth.dto.RefreshTokenRequest;
 import com.findly.api.auth.dto.RegisterRequest;
 import com.findly.api.common.enums.UserRole;
@@ -19,8 +20,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.UUID;
-
 @Service
 @RequiredArgsConstructor
 public class AuthService {
@@ -28,6 +27,7 @@ public class AuthService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
+    private final RefreshTokenService refreshTokenService;
 
     @Transactional
     public AuthUserResponse register(RegisterRequest request) {
@@ -51,16 +51,14 @@ public class AuthService {
         return AuthUserResponse.fromUser(savedUser);
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public AuthResponse login(LoginRequest request) {
         String normalizedEmail = request.email().trim().toLowerCase();
 
         User user = userRepository.findByEmailIgnoreCaseAndDeletedFalse(normalizedEmail)
                 .orElseThrow(() -> new ApiException(ErrorCode.UNAUTHORIZED, "Invalid email or password"));
 
-        if (user.getStatus() != UserStatus.ACTIVE) {
-            throw new ApiException(ErrorCode.FORBIDDEN, "User account is not active");
-        }
+        ensureUserCanAuthenticate(user);
 
         boolean passwordMatches = passwordEncoder.matches(request.password(), user.getPasswordHash());
 
@@ -71,26 +69,29 @@ public class AuthService {
         return buildAuthResponse(user);
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public AuthResponse refresh(RefreshTokenRequest request) {
-        String refreshToken = request.refreshToken().trim();
+        String oldRefreshToken = request.refreshToken().trim();
 
         try {
-            if (!jwtService.isRefreshToken(refreshToken)) {
-                throw new ApiException(ErrorCode.UNAUTHORIZED, "Invalid refresh token");
-            }
+            User user = refreshTokenService.validateRefreshTokenAndGetUser(oldRefreshToken);
+            ensureUserCanAuthenticate(user);
 
-            UUID userId = jwtService.extractUserId(refreshToken);
+            AuthResponse response = buildAuthResponse(user);
+            refreshTokenService.rotateRefreshToken(oldRefreshToken, response.refreshToken());
 
-            User user = userRepository.findById(userId)
-                    .filter(foundUser -> !foundUser.isDeleted())
-                    .orElseThrow(() -> new ApiException(ErrorCode.UNAUTHORIZED, "Invalid refresh token"));
+            return response;
+        } catch (ApiException exception) {
+            throw exception;
+        } catch (Exception exception) {
+            throw new ApiException(ErrorCode.UNAUTHORIZED, "Invalid refresh token");
+        }
+    }
 
-            if (user.getStatus() != UserStatus.ACTIVE) {
-                throw new ApiException(ErrorCode.FORBIDDEN, "User account is not active");
-            }
-
-            return buildAuthResponse(user);
+    @Transactional
+    public void logout(LogoutRequest request) {
+        try {
+            refreshTokenService.revokeRefreshToken(request.refreshToken().trim());
         } catch (ApiException exception) {
             throw exception;
         } catch (Exception exception) {
@@ -114,9 +115,15 @@ public class AuthService {
     private AuthResponse buildAuthResponse(User user) {
         return new AuthResponse(
                 jwtService.generateAccessToken(user),
-                jwtService.generateRefreshToken(user),
+                refreshTokenService.createRefreshToken(user),
                 "Bearer",
                 AuthUserResponse.fromUser(user)
         );
+    }
+
+    private void ensureUserCanAuthenticate(User user) {
+        if (user.getStatus() != UserStatus.ACTIVE || user.isDeleted()) {
+            throw new ApiException(ErrorCode.FORBIDDEN, "User account is not active");
+        }
     }
 }

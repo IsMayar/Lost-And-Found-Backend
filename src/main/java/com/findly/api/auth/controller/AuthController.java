@@ -1,10 +1,6 @@
 package com.findly.api.auth.controller;
 
-import com.findly.api.auth.dto.AuthResponse;
-import com.findly.api.auth.dto.AuthUserResponse;
-import com.findly.api.auth.dto.LoginRequest;
-import com.findly.api.auth.dto.RefreshTokenRequest;
-import com.findly.api.auth.dto.RegisterRequest;
+import com.findly.api.auth.dto.*;
 import com.findly.api.auth.service.AuthService;
 import com.findly.api.common.response.ApiResponse;
 import jakarta.servlet.http.HttpServletRequest;
@@ -13,6 +9,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/auth")
@@ -61,6 +59,20 @@ public class AuthController {
         return ApiResponse.success(
                 "Token refreshed successfully",
                 response,
+                servletRequest.getRequestURI()
+        );
+    }
+
+    @PostMapping("/logout")
+    public ApiResponse<Map<String, Boolean>> logout(
+            @Valid @RequestBody LogoutRequest request,
+            HttpServletRequest servletRequest
+    ) {
+        authService.logout(request);
+
+        return ApiResponse.success(
+                "User logged out successfully",
+                Map.of("loggedOut", true),
                 servletRequest.getRequestURI()
         );
     }
