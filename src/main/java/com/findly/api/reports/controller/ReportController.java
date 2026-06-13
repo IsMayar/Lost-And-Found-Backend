@@ -5,11 +5,7 @@ import com.findly.api.common.enums.ReportStatus;
 import com.findly.api.common.enums.ReportType;
 import com.findly.api.common.pagination.PageResponse;
 import com.findly.api.common.response.ApiResponse;
-import com.findly.api.reports.dto.CreateReportRequest;
-import com.findly.api.reports.dto.ReportResponse;
-import com.findly.api.reports.dto.ReportSearchRequest;
-import com.findly.api.reports.dto.UpdateReportRequest;
-import com.findly.api.reports.dto.UpdateReportStatusRequest;
+import com.findly.api.reports.dto.*;
 import com.findly.api.reports.service.ReportService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -18,9 +14,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 
 @RestController
 @RequestMapping("/api/v1/reports")
@@ -40,23 +34,10 @@ public class ReportController {
             @RequestParam(required = false) Integer size,
             HttpServletRequest servletRequest
     ) {
-        ReportSearchRequest request = new ReportSearchRequest(
-                type,
-                category,
-                status,
-                city,
-                keyword,
-                page,
-                size
-        );
-
+        ReportSearchRequest request = new ReportSearchRequest(type, category, status, city, keyword, page, size);
         PageResponse<ReportResponse> response = reportService.searchReports(request);
 
-        return ApiResponse.success(
-                "Reports returned successfully",
-                response,
-                servletRequest.getRequestURI()
-        );
+        return ApiResponse.success("Reports returned successfully", response, servletRequest.getRequestURI());
     }
 
     @PostMapping
@@ -83,11 +64,7 @@ public class ReportController {
     ) {
         List<ReportResponse> response = reportService.getMyReports(authentication);
 
-        return ApiResponse.success(
-                "My reports returned successfully",
-                response,
-                servletRequest.getRequestURI()
-        );
+        return ApiResponse.success("My reports returned successfully", response, servletRequest.getRequestURI());
     }
 
     @GetMapping("/{id}")
@@ -97,11 +74,7 @@ public class ReportController {
     ) {
         ReportResponse response = reportService.getReportById(id);
 
-        return ApiResponse.success(
-                "Report returned successfully",
-                response,
-                servletRequest.getRequestURI()
-        );
+        return ApiResponse.success("Report returned successfully", response, servletRequest.getRequestURI());
     }
 
     @PutMapping("/{id}")
@@ -113,11 +86,7 @@ public class ReportController {
     ) {
         ReportResponse response = reportService.updateReport(id, authentication, request);
 
-        return ApiResponse.success(
-                "Report updated successfully",
-                response,
-                servletRequest.getRequestURI()
-        );
+        return ApiResponse.success("Report updated successfully", response, servletRequest.getRequestURI());
     }
 
     @PatchMapping("/{id}/status")
@@ -129,11 +98,7 @@ public class ReportController {
     ) {
         ReportResponse response = reportService.updateReportStatus(id, authentication, request);
 
-        return ApiResponse.success(
-                "Report status updated successfully",
-                response,
-                servletRequest.getRequestURI()
-        );
+        return ApiResponse.success("Report status updated successfully", response, servletRequest.getRequestURI());
     }
 
     @DeleteMapping("/{id}")
@@ -144,10 +109,46 @@ public class ReportController {
     ) {
         reportService.deleteReport(id, authentication);
 
+        return ApiResponse.success("Report deleted successfully", Map.of("deleted", true), servletRequest.getRequestURI());
+    }
+
+    @PostMapping("/{id}/images")
+    @ResponseStatus(HttpStatus.CREATED)
+    public ApiResponse<ReportImageResponse> addReportImage(
+            @PathVariable UUID id,
+            Authentication authentication,
+            @Valid @RequestBody AddReportImageRequest request,
+            HttpServletRequest servletRequest
+    ) {
+        ReportImageResponse response = reportService.addReportImage(id, authentication, request);
+
         return ApiResponse.success(
-                "Report deleted successfully",
-                Map.of("deleted", true),
+                HttpStatus.CREATED.value(),
+                "Report image added successfully",
+                response,
                 servletRequest.getRequestURI()
         );
+    }
+
+    @GetMapping("/{id}/images")
+    public ApiResponse<List<ReportImageResponse>> getReportImages(
+            @PathVariable UUID id,
+            HttpServletRequest servletRequest
+    ) {
+        List<ReportImageResponse> response = reportService.getReportImages(id);
+
+        return ApiResponse.success("Report images returned successfully", response, servletRequest.getRequestURI());
+    }
+
+    @DeleteMapping("/{id}/images/{imageId}")
+    public ApiResponse<Map<String, Boolean>> deleteReportImage(
+            @PathVariable UUID id,
+            @PathVariable UUID imageId,
+            Authentication authentication,
+            HttpServletRequest servletRequest
+    ) {
+        reportService.deleteReportImage(id, imageId, authentication);
+
+        return ApiResponse.success("Report image deleted successfully", Map.of("deleted", true), servletRequest.getRequestURI());
     }
 }
