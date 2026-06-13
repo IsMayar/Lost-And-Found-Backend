@@ -1,0 +1,16 @@
+services:
+  findly-postgres:
+    image: postgres:16-alpine
+    container_name: findly-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: findly_db
+      POSTGRES_USER: findly_user
+      POSTGRES_PASSWORD: findly_password
+    ports:
+      - "5435:5432"
+    volumes:
+      - findly_postgres_data:/var/lib/postgresql/data
+
+volumes:
+  findly_postgres_data:
