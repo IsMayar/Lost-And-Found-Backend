@@ -62,6 +62,10 @@ public class SecurityConfig {
                                 "/api/v1/categories",
                                 "/api/v1/categories/**"
                         ).permitAll()
+
+                        // This must stay before the public /api/v1/reports/* matcher.
+                        .requestMatchers(HttpMethod.GET, "/api/v1/reports/saved").authenticated()
+
                         .requestMatchers(
                                 HttpMethod.GET,
                                 "/api/v1/reports",
