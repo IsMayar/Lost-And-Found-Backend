@@ -44,3 +44,7 @@ jwt:
   secret: "findly-local-development-secret-key-change-this-in-production-please-make-it-long"
   access-token-expiration-minutes: 30
   refresh-token-expiration-days: 7
+
+upload:
+  local-dir: uploads
+  public-path: /uploads
