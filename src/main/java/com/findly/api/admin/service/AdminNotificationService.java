@@ -1,6 +1,7 @@
 package com.findly.api.admin.service;
 
 import com.findly.api.admin.dto.AdminNotificationResponse;
+import com.findly.api.common.enums.AdminAuditAction;
 import com.findly.api.common.enums.NotificationType;
 import com.findly.api.common.exception.ApiException;
 import com.findly.api.common.exception.ErrorCode;
@@ -20,6 +21,7 @@ import java.util.UUID;
 public class AdminNotificationService {
 
     private final NotificationRepository notificationRepository;
+    private final AdminAuditLogService adminAuditLogService;
 
     @Transactional(readOnly = true)
     public PageResponse<AdminNotificationResponse> getNotifications(
@@ -76,6 +78,13 @@ public class AdminNotificationService {
 
         notification.markDeleted();
         notificationRepository.save(notification);
+
+        adminAuditLogService.log(
+                AdminAuditAction.NOTIFICATION_DELETED,
+                "NOTIFICATION",
+                notification.getId(),
+                "Deleted notification " + notification.getTitle()
+        );
     }
 
     private boolean matchesUserId(Notification notification, UUID userId) {

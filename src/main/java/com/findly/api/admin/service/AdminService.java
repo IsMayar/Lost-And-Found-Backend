@@ -30,6 +30,7 @@ public class AdminService {
     private final ReportRepository reportRepository;
     private final ClaimRepository claimRepository;
     private final NotificationRepository notificationRepository;
+    private final AdminAuditLogService adminAuditLogService;
 
     @Transactional(readOnly = true)
     public AdminDashboardStatsResponse getDashboardStats() {
@@ -79,7 +80,16 @@ public class AdminService {
             user.markDeleted();
         }
 
-        return AdminUserResponse.fromUser(userRepository.save(user));
+        User savedUser = userRepository.save(user);
+
+        adminAuditLogService.log(
+                AdminAuditAction.USER_STATUS_UPDATED,
+                "USER",
+                savedUser.getId(),
+                "Updated user status to " + savedUser.getStatus() + " for user " + savedUser.getEmail()
+        );
+
+        return AdminUserResponse.fromUser(savedUser);
     }
 
     @Transactional(readOnly = true)
@@ -116,7 +126,16 @@ public class AdminService {
 
         report.setStatus(request.status());
 
-        return AdminReportResponse.fromReport(reportRepository.save(report));
+        Report savedReport = reportRepository.save(report);
+
+        adminAuditLogService.log(
+                AdminAuditAction.REPORT_STATUS_UPDATED,
+                "REPORT",
+                savedReport.getId(),
+                "Updated report status to " + savedReport.getStatus() + " for report " + savedReport.getTitle()
+        );
+
+        return AdminReportResponse.fromReport(savedReport);
     }
 
     @Transactional
@@ -127,7 +146,16 @@ public class AdminService {
 
         report.setVerified(Boolean.TRUE.equals(request.verified()));
 
-        return AdminReportResponse.fromReport(reportRepository.save(report));
+        Report savedReport = reportRepository.save(report);
+
+        adminAuditLogService.log(
+                AdminAuditAction.REPORT_VERIFICATION_UPDATED,
+                "REPORT",
+                savedReport.getId(),
+                "Updated report verification to " + savedReport.isVerified() + " for report " + savedReport.getTitle()
+        );
+
+        return AdminReportResponse.fromReport(savedReport);
     }
 
     @Transactional(readOnly = true)
@@ -180,7 +208,16 @@ public class AdminService {
             }
         }
 
-        return AdminClaimResponse.fromClaim(claimRepository.save(claim));
+        Claim savedClaim = claimRepository.save(claim);
+
+        adminAuditLogService.log(
+                AdminAuditAction.CLAIM_STATUS_UPDATED,
+                "CLAIM",
+                savedClaim.getId(),
+                "Updated claim status to " + savedClaim.getStatus() + " for report " + savedClaim.getReport().getTitle()
+        );
+
+        return AdminClaimResponse.fromClaim(savedClaim);
     }
 
     private Specification<User> buildUserSpecification(String keyword, UserStatus status) {
