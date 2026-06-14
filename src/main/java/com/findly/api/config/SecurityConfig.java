@@ -11,6 +11,7 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -20,6 +21,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 @Configuration
+@EnableMethodSecurity
 @RequiredArgsConstructor
 public class SecurityConfig {
 
@@ -62,10 +64,7 @@ public class SecurityConfig {
                                 "/api/v1/categories",
                                 "/api/v1/categories/**"
                         ).permitAll()
-
-                        // This must stay before the public /api/v1/reports/* matcher.
                         .requestMatchers(HttpMethod.GET, "/api/v1/reports/saved").authenticated()
-
                         .requestMatchers(
                                 HttpMethod.GET,
                                 "/api/v1/reports",

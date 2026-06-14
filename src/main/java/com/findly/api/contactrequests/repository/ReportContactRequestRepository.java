@@ -1,15 +1,17 @@
 package com.findly.api.contactrequests.repository;
 
+import com.findly.api.common.enums.ContactRequestStatus;
 import com.findly.api.contactrequests.entity.ReportContactRequest;
 import com.findly.api.reports.entity.Report;
 import com.findly.api.users.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-public interface ReportContactRequestRepository extends JpaRepository<ReportContactRequest, UUID> {
+public interface ReportContactRequestRepository extends JpaRepository<ReportContactRequest, UUID>, JpaSpecificationExecutor<ReportContactRequest> {
 
     Optional<ReportContactRequest> findByIdAndDeletedFalse(UUID id);
 
@@ -18,4 +20,6 @@ public interface ReportContactRequestRepository extends JpaRepository<ReportCont
     List<ReportContactRequest> findByRequesterAndDeletedFalseOrderByCreatedAtDesc(User requester);
 
     List<ReportContactRequest> findByOwnerAndDeletedFalseOrderByCreatedAtDesc(User owner);
+
+    long countByStatusAndDeletedFalse(ContactRequestStatus status);
 }
