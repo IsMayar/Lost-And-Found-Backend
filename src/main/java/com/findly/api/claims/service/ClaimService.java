@@ -6,9 +6,11 @@ import com.findly.api.claims.dto.UpdateClaimStatusRequest;
 import com.findly.api.claims.entity.Claim;
 import com.findly.api.claims.repository.ClaimRepository;
 import com.findly.api.common.enums.ClaimStatus;
+import com.findly.api.common.enums.NotificationType;
 import com.findly.api.common.enums.ReportStatus;
 import com.findly.api.common.exception.ApiException;
 import com.findly.api.common.exception.ErrorCode;
+import com.findly.api.notifications.service.NotificationService;
 import com.findly.api.reports.entity.Report;
 import com.findly.api.reports.repository.ReportRepository;
 import com.findly.api.security.user.UserPrincipal;
@@ -29,6 +31,7 @@ public class ClaimService {
     private final ClaimRepository claimRepository;
     private final ReportRepository reportRepository;
     private final UserRepository userRepository;
+    private final NotificationService notificationService;
 
     @Transactional
     public ClaimResponse createClaim(UUID reportId, Authentication authentication, CreateClaimRequest request) {
@@ -54,7 +57,18 @@ public class ClaimService {
         claim.setMessage(request.message().trim());
         claim.setProofText(cleanNullable(request.proofText()));
 
-        return ClaimResponse.fromClaim(claimRepository.save(claim));
+        Claim savedClaim = claimRepository.save(claim);
+
+        notificationService.notifyUser(
+                report.getOwner(),
+                NotificationType.CLAIM_SUBMITTED,
+                "New claim submitted",
+                claimant.getFullName() + " submitted a claim for your report: " + report.getTitle(),
+                report,
+                savedClaim
+        );
+
+        return ClaimResponse.fromClaim(savedClaim);
     }
 
     @Transactional(readOnly = true)
@@ -109,6 +123,28 @@ public class ClaimService {
         }
 
         claim.setStatus(request.status());
+
+        if (request.status() == ClaimStatus.APPROVED) {
+            notificationService.notifyUser(
+                    claim.getClaimant(),
+                    NotificationType.CLAIM_APPROVED,
+                    "Claim approved",
+                    "Your claim was approved for report: " + claim.getReport().getTitle(),
+                    claim.getReport(),
+                    claim
+            );
+        }
+
+        if (request.status() == ClaimStatus.REJECTED) {
+            notificationService.notifyUser(
+                    claim.getClaimant(),
+                    NotificationType.CLAIM_REJECTED,
+                    "Claim rejected",
+                    "Your claim was rejected for report: " + claim.getReport().getTitle(),
+                    claim.getReport(),
+                    claim
+            );
+        }
 
         if (request.status() == ClaimStatus.APPROVED || request.status() == ClaimStatus.RESOLVED) {
             claim.getReport().setStatus(ReportStatus.CLAIMED);
