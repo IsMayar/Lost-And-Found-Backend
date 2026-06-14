@@ -1,6 +1,7 @@
 package com.findly.api.claims.repository;
 
 import com.findly.api.claims.entity.Claim;
+import com.findly.api.common.enums.ClaimStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
@@ -16,4 +17,8 @@ public interface ClaimRepository extends JpaRepository<Claim, UUID> {
     List<Claim> findByReportIdAndDeletedFalseOrderByCreatedAtDesc(UUID reportId);
 
     Optional<Claim> findByIdAndDeletedFalse(UUID id);
+
+    long countByDeletedFalse();
+
+    long countByStatusAndDeletedFalse(ClaimStatus status);
 }

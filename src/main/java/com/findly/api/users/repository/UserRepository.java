@@ -1,5 +1,6 @@
 package com.findly.api.users.repository;
 
+import com.findly.api.common.enums.UserStatus;
 import com.findly.api.users.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
@@ -12,4 +13,8 @@ public interface UserRepository extends JpaRepository<User, UUID>, JpaSpecificat
     Optional<User> findByEmailIgnoreCaseAndDeletedFalse(String email);
 
     boolean existsByEmailIgnoreCaseAndDeletedFalse(String email);
+
+    long countByDeletedFalse();
+
+    long countByStatusAndDeletedFalse(UserStatus status);
 }

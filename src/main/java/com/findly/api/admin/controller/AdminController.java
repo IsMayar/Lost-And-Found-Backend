@@ -22,6 +22,19 @@ public class AdminController {
 
     private final AdminService adminService;
 
+    @GetMapping("/dashboard/stats")
+    public ApiResponse<AdminDashboardStatsResponse> getDashboardStats(
+            HttpServletRequest servletRequest
+    ) {
+        AdminDashboardStatsResponse response = adminService.getDashboardStats();
+
+        return ApiResponse.success(
+                "Admin dashboard stats returned successfully",
+                response,
+                servletRequest.getRequestURI()
+        );
+    }
+
     @GetMapping("/users")
     public ApiResponse<PageResponse<AdminUserResponse>> getUsers(
             @RequestParam(required = false) String keyword,

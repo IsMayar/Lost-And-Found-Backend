@@ -1,13 +1,12 @@
 package com.findly.api.admin.service;
 
 import com.findly.api.admin.dto.*;
-import com.findly.api.common.enums.ReportCategory;
-import com.findly.api.common.enums.ReportStatus;
-import com.findly.api.common.enums.ReportType;
-import com.findly.api.common.enums.UserStatus;
+import com.findly.api.claims.repository.ClaimRepository;
+import com.findly.api.common.enums.*;
 import com.findly.api.common.exception.ApiException;
 import com.findly.api.common.exception.ErrorCode;
 import com.findly.api.common.pagination.PageResponse;
+import com.findly.api.notifications.repository.NotificationRepository;
 import com.findly.api.reports.entity.Report;
 import com.findly.api.reports.repository.ReportRepository;
 import com.findly.api.users.entity.User;
@@ -28,6 +27,27 @@ public class AdminService {
 
     private final UserRepository userRepository;
     private final ReportRepository reportRepository;
+    private final ClaimRepository claimRepository;
+    private final NotificationRepository notificationRepository;
+
+    @Transactional(readOnly = true)
+    public AdminDashboardStatsResponse getDashboardStats() {
+        return new AdminDashboardStatsResponse(
+                userRepository.countByDeletedFalse(),
+                userRepository.countByStatusAndDeletedFalse(UserStatus.ACTIVE),
+                userRepository.countByStatusAndDeletedFalse(UserStatus.SUSPENDED),
+                reportRepository.countByDeletedFalse(),
+                reportRepository.countByStatusAndDeletedFalse(ReportStatus.ACTIVE),
+                reportRepository.countByStatusAndDeletedFalse(ReportStatus.CLAIMED),
+                reportRepository.countByStatusAndDeletedFalse(ReportStatus.RESOLVED),
+                reportRepository.countByVerifiedAndDeletedFalse(true),
+                claimRepository.countByDeletedFalse(),
+                claimRepository.countByStatusAndDeletedFalse(ClaimStatus.PENDING),
+                claimRepository.countByStatusAndDeletedFalse(ClaimStatus.APPROVED),
+                claimRepository.countByStatusAndDeletedFalse(ClaimStatus.REJECTED),
+                notificationRepository.countByReadFalseAndDeletedFalse()
+        );
+    }
 
     @Transactional(readOnly = true)
     public PageResponse<AdminUserResponse> getUsers(String keyword, UserStatus status, Integer page, Integer size) {

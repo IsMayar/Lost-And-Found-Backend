@@ -17,4 +17,10 @@ public interface ReportRepository extends JpaRepository<Report, UUID>, JpaSpecif
             ReportType type,
             ReportStatus status
     );
+
+    long countByDeletedFalse();
+
+    long countByStatusAndDeletedFalse(ReportStatus status);
+
+    long countByVerifiedAndDeletedFalse(boolean verified);
 }

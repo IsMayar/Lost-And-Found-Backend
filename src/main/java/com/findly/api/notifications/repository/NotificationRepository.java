@@ -15,4 +15,6 @@ public interface NotificationRepository extends JpaRepository<Notification, UUID
     List<Notification> findByUserIdAndReadFalseAndDeletedFalse(UUID userId);
 
     long countByUserIdAndReadFalseAndDeletedFalse(UUID userId);
+
+    long countByReadFalseAndDeletedFalse();
 }
