@@ -4,6 +4,8 @@ import com.findly.api.common.enums.ReportStatus;
 import com.findly.api.common.exception.ApiException;
 import com.findly.api.common.exception.ErrorCode;
 import com.findly.api.common.pagination.PageResponse;
+import com.findly.api.files.dto.FileUploadResponse;
+import com.findly.api.files.service.FileStorageService;
 import com.findly.api.reports.dto.*;
 import com.findly.api.reports.entity.Report;
 import com.findly.api.reports.entity.ReportImage;
@@ -17,6 +19,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.*;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.core.Authentication;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,6 +34,7 @@ public class ReportService {
     private final ReportRepository reportRepository;
     private final ReportImageRepository reportImageRepository;
     private final UserRepository userRepository;
+    private final FileStorageService fileStorageService;
 
     @Transactional
     public ReportResponse createReport(Authentication authentication, CreateReportRequest request) {
@@ -153,6 +157,39 @@ public class ReportService {
         image.setPrimaryImage(Boolean.TRUE.equals(request.primaryImage()) || imageCount == 0);
 
         return ReportImageResponse.fromImage(reportImageRepository.save(image));
+    }
+
+
+    @Transactional
+    public UploadedReportImageResponse uploadReportImage(
+            UUID reportId,
+            Authentication authentication,
+            MultipartFile file,
+            Integer sortOrder,
+            Boolean primaryImage
+    ) {
+        User currentUser = getCurrentUser(authentication);
+        Report report = getOwnedReport(reportId, currentUser);
+
+        long imageCount = reportImageRepository.countByReportIdAndDeletedFalse(reportId);
+        if (imageCount >= MAX_IMAGES_PER_REPORT) {
+            throw new ApiException(ErrorCode.BAD_REQUEST, "Maximum report image limit reached");
+        }
+
+        FileUploadResponse uploadedFile = fileStorageService.upload(file);
+
+        ReportImage image = new ReportImage();
+        image.setReport(report);
+        image.setUrl(uploadedFile.url());
+        image.setOriginalName(uploadedFile.originalName());
+        image.setContentType(uploadedFile.contentType());
+        image.setSizeBytes(uploadedFile.sizeBytes());
+        image.setSortOrder(sortOrder == null ? (int) imageCount : sortOrder);
+        image.setPrimaryImage(Boolean.TRUE.equals(primaryImage) || imageCount == 0);
+
+        ReportImageResponse imageResponse = ReportImageResponse.fromImage(reportImageRepository.save(image));
+
+        return new UploadedReportImageResponse(uploadedFile, imageResponse);
     }
 
     @Transactional(readOnly = true)

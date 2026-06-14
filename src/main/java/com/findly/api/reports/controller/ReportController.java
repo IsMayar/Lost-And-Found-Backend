@@ -11,8 +11,10 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.*;
 
@@ -125,6 +127,32 @@ public class ReportController {
         return ApiResponse.success(
                 HttpStatus.CREATED.value(),
                 "Report image added successfully",
+                response,
+                servletRequest.getRequestURI()
+        );
+    }
+
+    @PostMapping(value = "/{id}/images/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @ResponseStatus(HttpStatus.CREATED)
+    public ApiResponse<UploadedReportImageResponse> uploadReportImage(
+            @PathVariable UUID id,
+            Authentication authentication,
+            @RequestPart("file") MultipartFile file,
+            @RequestParam(required = false) Integer sortOrder,
+            @RequestParam(required = false) Boolean primaryImage,
+            HttpServletRequest servletRequest
+    ) {
+        UploadedReportImageResponse response = reportService.uploadReportImage(
+                id,
+                authentication,
+                file,
+                sortOrder,
+                primaryImage
+        );
+
+        return ApiResponse.success(
+                HttpStatus.CREATED.value(),
+                "Report image uploaded successfully",
                 response,
                 servletRequest.getRequestURI()
         );
