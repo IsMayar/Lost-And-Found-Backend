@@ -22,4 +22,6 @@ public interface NotificationRepository extends JpaRepository<Notification, UUID
     Optional<Notification> findByIdAndDeletedFalse(UUID id);
 
     List<Notification> findByDeletedFalseOrderByCreatedAtDesc();
+
+    List<Notification> findByDeletedFalseOrderByCreatedAtDesc(Pageable pageable);
 }

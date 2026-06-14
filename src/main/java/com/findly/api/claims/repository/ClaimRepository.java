@@ -2,6 +2,7 @@ package com.findly.api.claims.repository;
 
 import com.findly.api.claims.entity.Claim;
 import com.findly.api.common.enums.ClaimStatus;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 
@@ -18,6 +19,10 @@ public interface ClaimRepository extends JpaRepository<Claim, UUID>, JpaSpecific
     List<Claim> findByReportIdAndDeletedFalseOrderByCreatedAtDesc(UUID reportId);
 
     Optional<Claim> findByIdAndDeletedFalse(UUID id);
+
+    List<Claim> findByDeletedFalseOrderByCreatedAtDesc(Pageable pageable);
+
+    List<Claim> findByStatusAndDeletedFalseOrderByCreatedAtDesc(ClaimStatus status, Pageable pageable);
 
     long countByDeletedFalse();
 
