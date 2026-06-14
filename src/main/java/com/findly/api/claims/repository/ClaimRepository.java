@@ -3,12 +3,13 @@ package com.findly.api.claims.repository;
 import com.findly.api.claims.entity.Claim;
 import com.findly.api.common.enums.ClaimStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-public interface ClaimRepository extends JpaRepository<Claim, UUID> {
+public interface ClaimRepository extends JpaRepository<Claim, UUID>, JpaSpecificationExecutor<Claim> {
 
     boolean existsByReportIdAndClaimantIdAndDeletedFalse(UUID reportId, UUID claimantId);
 

@@ -1,6 +1,7 @@
 package com.findly.api.admin.service;
 
 import com.findly.api.admin.dto.*;
+import com.findly.api.claims.entity.Claim;
 import com.findly.api.claims.repository.ClaimRepository;
 import com.findly.api.common.enums.*;
 import com.findly.api.common.exception.ApiException;
@@ -129,6 +130,59 @@ public class AdminService {
         return AdminReportResponse.fromReport(reportRepository.save(report));
     }
 
+    @Transactional(readOnly = true)
+    public PageResponse<AdminClaimResponse> getClaims(
+            ClaimStatus status,
+            UUID reportId,
+            UUID claimantId,
+            String keyword,
+            Integer page,
+            Integer size
+    ) {
+        int safePage = page == null || page < 1 ? 1 : page;
+        int safeSize = size == null || size < 1 ? 20 : Math.min(size, 100);
+
+        Pageable pageable = PageRequest.of(
+                safePage - 1,
+                safeSize,
+                Sort.by(Sort.Direction.DESC, "createdAt")
+        );
+
+        Page<AdminClaimResponse> claims = claimRepository
+                .findAll(buildClaimSpecification(status, reportId, claimantId, keyword), pageable)
+                .map(AdminClaimResponse::fromClaim);
+
+        return PageResponse.fromPage(claims);
+    }
+
+    @Transactional(readOnly = true)
+    public AdminClaimResponse getClaimById(UUID claimId) {
+        Claim claim = claimRepository.findByIdAndDeletedFalse(claimId)
+                .orElseThrow(() -> new ApiException(ErrorCode.NOT_FOUND, "Claim not found"));
+
+        return AdminClaimResponse.fromClaim(claim);
+    }
+
+    @Transactional
+    public AdminClaimResponse updateClaimStatus(UUID claimId, AdminUpdateClaimStatusRequest request) {
+        Claim claim = claimRepository.findByIdAndDeletedFalse(claimId)
+                .orElseThrow(() -> new ApiException(ErrorCode.NOT_FOUND, "Claim not found"));
+
+        claim.setStatus(request.status());
+
+        if (request.status() == ClaimStatus.APPROVED || request.status() == ClaimStatus.RESOLVED) {
+            claim.getReport().setStatus(ReportStatus.CLAIMED);
+        }
+
+        if (request.status() == ClaimStatus.REJECTED || request.status() == ClaimStatus.CANCELLED) {
+            if (claim.getReport().getStatus() == ReportStatus.CLAIMED) {
+                claim.getReport().setStatus(ReportStatus.ACTIVE);
+            }
+        }
+
+        return AdminClaimResponse.fromClaim(claimRepository.save(claim));
+    }
+
     private Specification<User> buildUserSpecification(String keyword, UserStatus status) {
         return (root, query, criteriaBuilder) -> {
             var predicates = new ArrayList<Predicate>();
@@ -191,6 +245,46 @@ public class AdminService {
                         criteriaBuilder.like(criteriaBuilder.lower(root.get("description")), pattern),
                         criteriaBuilder.like(criteriaBuilder.lower(root.get("city")), pattern),
                         criteriaBuilder.like(criteriaBuilder.lower(root.get("locationText")), pattern)
+                ));
+            }
+
+            return criteriaBuilder.and(predicates.toArray(new Predicate[0]));
+        };
+    }
+
+    private Specification<Claim> buildClaimSpecification(
+            ClaimStatus status,
+            UUID reportId,
+            UUID claimantId,
+            String keyword
+    ) {
+        return (root, query, criteriaBuilder) -> {
+            var predicates = new ArrayList<Predicate>();
+
+            predicates.add(criteriaBuilder.isFalse(root.get("deleted")));
+
+            if (status != null) {
+                predicates.add(criteriaBuilder.equal(root.get("status"), status));
+            }
+
+            if (reportId != null) {
+                predicates.add(criteriaBuilder.equal(root.get("report").get("id"), reportId));
+            }
+
+            if (claimantId != null) {
+                predicates.add(criteriaBuilder.equal(root.get("claimant").get("id"), claimantId));
+            }
+
+            String cleanedKeyword = cleanNullable(keyword);
+            if (cleanedKeyword != null) {
+                String pattern = "%" + cleanedKeyword.toLowerCase() + "%";
+
+                predicates.add(criteriaBuilder.or(
+                        criteriaBuilder.like(criteriaBuilder.lower(root.get("message")), pattern),
+                        criteriaBuilder.like(criteriaBuilder.lower(root.get("proofText")), pattern),
+                        criteriaBuilder.like(criteriaBuilder.lower(root.get("report").get("title")), pattern),
+                        criteriaBuilder.like(criteriaBuilder.lower(root.get("claimant").get("fullName")), pattern),
+                        criteriaBuilder.like(criteriaBuilder.lower(root.get("claimant").get("email")), pattern)
                 ));
             }
 

@@ -2,6 +2,7 @@ package com.findly.api.admin.controller;
 
 import com.findly.api.admin.dto.*;
 import com.findly.api.admin.service.AdminService;
+import com.findly.api.common.enums.ClaimStatus;
 import com.findly.api.common.enums.ReportCategory;
 import com.findly.api.common.enums.ReportStatus;
 import com.findly.api.common.enums.ReportType;
@@ -120,6 +121,61 @@ public class AdminController {
 
         return ApiResponse.success(
                 "Report verification updated successfully",
+                response,
+                servletRequest.getRequestURI()
+        );
+    }
+
+    @GetMapping("/claims")
+    public ApiResponse<PageResponse<AdminClaimResponse>> getClaims(
+            @RequestParam(required = false) ClaimStatus status,
+            @RequestParam(required = false) UUID reportId,
+            @RequestParam(required = false) UUID claimantId,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false) Integer size,
+            HttpServletRequest servletRequest
+    ) {
+        PageResponse<AdminClaimResponse> response = adminService.getClaims(
+                status,
+                reportId,
+                claimantId,
+                keyword,
+                page,
+                size
+        );
+
+        return ApiResponse.success(
+                "Admin claims returned successfully",
+                response,
+                servletRequest.getRequestURI()
+        );
+    }
+
+    @GetMapping("/claims/{id}")
+    public ApiResponse<AdminClaimResponse> getClaimById(
+            @PathVariable UUID id,
+            HttpServletRequest servletRequest
+    ) {
+        AdminClaimResponse response = adminService.getClaimById(id);
+
+        return ApiResponse.success(
+                "Admin claim returned successfully",
+                response,
+                servletRequest.getRequestURI()
+        );
+    }
+
+    @PatchMapping("/claims/{id}/status")
+    public ApiResponse<AdminClaimResponse> updateClaimStatus(
+            @PathVariable UUID id,
+            @Valid @RequestBody AdminUpdateClaimStatusRequest request,
+            HttpServletRequest servletRequest
+    ) {
+        AdminClaimResponse response = adminService.updateClaimStatus(id, request);
+
+        return ApiResponse.success(
+                "Admin claim status updated successfully",
                 response,
                 servletRequest.getRequestURI()
         );
